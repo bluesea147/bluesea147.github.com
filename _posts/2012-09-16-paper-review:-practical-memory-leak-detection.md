@@ -4,12 +4,12 @@ category :
 tags : [research]
 ---
 
-The paper is [Practical memory leak detection using guarded value-flow analysis ](www.cs.cornell.edu/~rugina/papers/pldi07.pdf) (Cherem, Princehouse) PLDI'07
+The paper is [**_Practical memory leak detection using guarded value-flow analysis_**](http://www.cs.cornell.edu/~rugina/papers/pldi07.pdf). **Cherem, Princehouse PLDI'07**
 
 ###Brief Introduction
 
 
-Facing the frequent problems of leaking memory and double free, the paper proposes the static value-flow analysis to detect the memory leakage. Firstly, the author transforms the problem to source-sink problem, that every source of memory allocation must flow to exactly one sink of deallocation. Thus, by parsing and processing program to get value-flow graph, they attach guards to edge, denoting the in which condition the path would follow that way. Finally, the analysis engine calculates the possible conditions meeting the guards that would lead to none, one, or more deallocation sink. They presents the memory management error by listing the possible conditions(in text) or visual branches(in HTML) that leading to leaking.
+Facing the frequent problems of leaking memory and double free, the paper proposes the static value-flow analysis to detect the memory leakage. Firstly, the author transforms the problem to source-sink problem, that every source of memory allocation must flow to exactly one sink of deallocation. Thus, by parsing and processing program to get value-flow graph, they attach guards to edge, denoting the in which condition the path would follow that way. Finally, the analysis engine calculates the possible conditions meeting the guards. They presents the memory management error by listing the possible conditions(in text) or visual branches(in HTML) that leading to leaking.
 
 In this process, to simplify the problem, the paper also does some other prepared work, such as allocator function's identification, formula simplification, post-dominator in CFG.
 
@@ -56,23 +56,21 @@ What's more, I think the analysis should utilize the compiler's optimization, li
 In its analysis engine, the free() sink would be guarded by condition `a>10`, and generate a `may memory leak` problem.
 But if this code is optimized by compiler, the testing condition would be removed as a's value must be greater than 10.
 
-After reading the third paper, KLEE Unassisted Test Cases Generator, this paper's drawback is more obvious. Because it is totally based on static analysis.
-
 
 ####2) Bug Report Message
 
 The paper argues that the bug message is very concise, easily understood as biggest slice node number is just 11. But the small size of the slice  does not merely come from its good algorithm.
 
-In section 5.6.3, the paper says, when the guard formula becomes very large in complicated and unstructured control-flow(maybe due to `goto` statement), they just stop analysis and mark it unknown. It could also partly explain why so many unknown leaking problem in experiment data. So conciseness of message is partly due to removing of complicated guards. 
+The paper says, when the guard formula becomes very large in complicated and unstructured control-flow(maybe due to `goto` statement), they just stop analysis and mark it unknown. It could also partly explain why so many unknown leaking problem in experiment data. So simpleness of message is partly due to that disregarding.
 
 
 ###Ideas
 
 ####1) About the memory leaking detection
 
-The method in this paper is basically relied on static analysis. On the contrary, In Java/C# languages, they adopt the approach of reference counting, to collect memory automatically. Inspired from that, I have the idea, why not also equips C with such facility? Not meaning changing C language itself, we could still get some benefits from that.
+On the contrary, In Java/C# languages, they adopt the approach of reference counting, to collect memory automatically. Inspired from that, I have the idea, why not also equips C with such facility? 
 
-Firstly, we could implement the reference counting system for C, by inserting several  code segments at corresponding program sites. Such as, add reference count when coming across the pointer assignments, decrease the count when pointer is assigned to another address or it's out of life-range. Then run the program, and do calculations of reference counting to determine existence of memory leaking. If we found one, give the traces of problem to programmer, and they could remove reference counting code after fixing leaking bug. So it would not low down the final program's performance.
+Firstly, we could implement the reference counting system for C, by inserting some code segments at some program sites. Such as, add reference count when coming across the pointer assignments, decrease the count when pointer is assigned to another address or it's out of life-range. Then run the program, and do calculations of reference counting to determine existence of memory leaking. If we found one, give the traces of problem to programmer, and they could remove reference counting code after fixing leaking bug. So it would not low down the final program's performance.
 
 There are two potential problems of this solution. Firstly, to detect leaking problem in runtime environment, it has to cover large possible paths. But this problem could be alleviated by some test tools, that generate nice testing samples(Paper “KLEE” is on this topic). Another problem is difficulty of reference count construction due to C's capability of direct operation on memory. For example, “memcpy()” may copy the pointer.
 
@@ -86,13 +84,7 @@ But if the analysis has to be reconstructed from beginning for another 43 min af
 
 ####3) Including Dangling pointer Error Report
 
-As the paper has worked out the memory leaking problem, why not also include the further analysis  on dangling pointer error? Firstly we could get the reaching definition for pointers.  And for each pointer's using point, compute the guards along the path from “free()” point to pointer's using point, then this task is also be transformed to a similar problem: identify the conditions that would lead free() pint flowing to not-redefined pointers using point. So we could still solve this problem by the aid of FastCheck system.
-
-####4) Trade-off between efficiency and precision
-
-In the paper's experiment section, we could notice, some existing similar leaking detection tool, for instance,  Saturn, outperform than this tool. The only drawback is its low speed. If we put some techniques, such as traversal depth, applied algorithm as parameters, then the tool is configurable and user-friendly. 
-
-
+The work can be revised a little to handle dangling pointer problem. Firstly we could get the reaching definition for pointers.  And for each pointer's using point, compute the guards along the path from “free()” point to pointer's using point, then this task is also be transformed to a similar problem: identify the conditions that would lead free() pint flowing to not-redefined pointers using point. So we could still solve this problem by the aid of FastCheck system.
 
 ###Questions & Understanding
 
